@@ -5180,6 +5180,7 @@ function D.destroyWindow()
 	if W.win then W.win:Destroy() end
 	W.win = nil
 	W.scale = nil
+	W.bgGrad, W.bgGradGrad = nil, nil
 end
 
 function D.clampWin(x, y)
@@ -5231,14 +5232,15 @@ local function headerButton(parent, iconName, tipText, order)
 	return b, ic
 end
 
-function D.applyBackground()
+function local ok, err = pcall(D.applyBackground)
+	if not ok then warn("arvn: background error: " .. tostring(err)) end
 	local W2 = W
 	if not W2.bg then return end
-	local hasImg = S.bg_on and D.bgAsset ~= nil
-	local hasGrad = S.bg_grad and W2.bgGrad ~= nil
-	W2.bg.Visible = hasImg
-	W2.bgDark.Visible = hasImg
-	if W2.bgGrad then W2.bgGrad.Visible = hasGrad end
+	local hasImg = S.bg_on == true and D.bgAsset ~= nil
+	local hasGrad = S.bg_grad == true and W2.bgGrad ~= nil and W2.bgGradGrad ~= nil
+	W2.bg.Visible = hasImg and true or false
+	W2.bgDark.Visible = hasImg and true or false
+	if W2.bgGrad then W2.bgGrad.Visible = hasGrad and true or false end
 	if hasImg then
 		W2.bg.Image = D.bgAsset
 		local fit = S.bg_fit
@@ -5248,11 +5250,11 @@ function D.applyBackground()
 		W2.bgDark.BackgroundTransparency = 1 - (S.bg_dark or 45) / 100
 	end
 	if hasGrad then
-		local c1, a1 = D.parseColor(S.bg_grad_c1)
-		local c2, a2 = D.parseColor(S.bg_grad_c2)
-		W2.bgGrad.grad.Color = ColorSequence.new(c1, c2)
-		W2.bgGrad.grad.Transparency = NumberSequence.new(1 - a1, 1 - a2)
-		W2.bgGrad.grad.Rotation = tonumber(S.bg_grad_rot) or 90
+		local c1, a1 = D.parseColor(S.bg_grad_c1 or "#7b2ff7ff")
+		local c2, a2 = D.parseColor(S.bg_grad_c2 or "#f107a3ff")
+		W2.bgGradGrad.Color = ColorSequence.new(c1, c2)
+		W2.bgGradGrad.Transparency = NumberSequence.new(1 - a1, 1 - a2)
+		W2.bgGradGrad.Rotation = tonumber(S.bg_grad_rot) or 90
 		W2.bgGrad.BackgroundTransparency = 1 - (tonumber(S.bg_grad_opacity) or 100) / 100
 	end
 end
@@ -5279,7 +5281,8 @@ function D.buildWindow()
 	W.bgGrad.grad = new("UIGradient", {Rotation = 90, Parent = W.bgGrad})
 	W.bg = new("ImageLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ImageTransparency = 1, Visible = false, ZIndex = 1, Parent = win})
 	W.bgDark = frame({Size = UDim2.fromScale(1, 1), BackgroundColor3 = T.black, BackgroundTransparency = 1, Visible = false, ZIndex = 1, Parent = win})
-	D.applyBackground()
+	local ok, err = pcall(D.applyBackground)
+	if not ok then warn("arvn: background error: " .. tostring(err)) end
 
 	local sideDrag = frame({Size = UDim2.fromOffset(SIDE_W, 62), BackgroundTransparency = 1, ZIndex = 1, Parent = win})
 	sideDrag.InputBegan:Connect(function(i)
@@ -7814,7 +7817,8 @@ function D.syncImages()
 					D.bgAsset = asset
 					D.META.bg_src_url = url
 					D.writeMeta()
-					D.applyBackground()
+					local ok, err = pcall(D.applyBackground)
+	if not ok then warn("arvn: background error: " .. tostring(err)) end
 				end
 			end
 			local purl = tostring(S.pfp_url or "")
@@ -7987,7 +7991,8 @@ A.act_bg_load = function()
 	D.META.bg_src_url = url
 	D.writeMeta()
 	set("bg_on", true)
-	D.applyBackground()
+	local ok, err = pcall(D.applyBackground)
+	if not ok then warn("arvn: background error: " .. tostring(err)) end
 	D.notify("Background", "Applied to the window.", {icon = "wallpaper"})
 end
 A.act_avatar = function()
@@ -9543,7 +9548,8 @@ function Window:SetGradient(a, b, rot, opacity)
 		D.set("bg_grad_opacity", math.clamp(p, 0, 100))
 	end
 	D.set("bg_grad", true)
-	D.applyBackground()
+	local ok, err = pcall(D.applyBackground)
+	if not ok then warn("arvn: background error: " .. tostring(err)) end
 end
 function API:Notify(o, body, dur) return notify(o, body, dur) end
 
@@ -10385,7 +10391,8 @@ function Window:SetBackground(o)
 			if asset then
 				D.bgAsset = asset
 				D.set("bg_on", true)
-				D.applyBackground()
+				local ok, err = pcall(D.applyBackground)
+	if not ok then warn("arvn: background error: " .. tostring(err)) end
 			end
 		end)
 	elseif o.Enabled ~= nil then
